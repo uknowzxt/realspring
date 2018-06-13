@@ -37,7 +37,10 @@
         ↑                                           ↑
   
     BeanDefinitionStoreException             BeanCreationExceptin
-
+    
+        ↑                                           ↑
+    读取XML文件出错时抛出异常                  创建Bean出错时抛出异常
+    
 
 
 
