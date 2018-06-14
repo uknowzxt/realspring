@@ -15,7 +15,7 @@
 1 各个类的大体功能：
     
     （1）BeanDefinition 接口 ，类定义接口。 
-    （2）实现BeanDefinition接口，有 id和beanClassName 两个成员属性
+    （2）GenericBeanDefinition ，实现BeanDefinition接口，有 id和beanClassName 两个成员属性
     （3）BeanFactory 接口 ，用来获取类定义（getBeanDefinition）和类的实现（getBean）
     （4）DefaulBeanFactory ，BeanFactory的实现类。
             有参构造   ： public BeanDefinition getBeanDefinition(String beanId) 直接调用void loadBeanDefinition(String configFile) 方法
