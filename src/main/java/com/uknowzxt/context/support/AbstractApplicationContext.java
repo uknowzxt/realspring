@@ -1,0 +1,44 @@
+package com.uknowzxt.context.support;
+
+import com.uknowzxt.beans.factory.support.DefaulBeanFactory;
+import com.uknowzxt.beans.factory.xml.XmlBeanDefinitionReader;
+import com.uknowzxt.context.ApplicationContext;
+import com.uknowzxt.core.io.ClassPathResource;
+import com.uknowzxt.core.io.Resource;
+import com.uknowzxt.util.ClassUtils;
+
+public abstract class AbstractApplicationContext  implements ApplicationContext{
+    private DefaulBeanFactory factory = null;
+    private ClassLoader beanClassLoader;
+
+    public AbstractApplicationContext(String configFile) {
+        factory = new DefaulBeanFactory();
+        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(factory);
+        Resource resource =this.getResourceByPath(configFile);
+        reader.loadBeanDefinitions(resource);
+        //todo ???
+        factory.setBeanClassLoader(this.getBeanClassLoader());
+
+    }
+
+
+    @Override
+    public Object getBean(String beanID) {
+        return factory.getBean(beanID);
+    }
+
+
+
+    protected abstract Resource getResourceByPath(String path);
+
+    @Override
+    public void setBeanClassLoader(ClassLoader beanClassLoader) {
+        this.beanClassLoader = beanClassLoader;
+    }
+
+    @Override
+    public ClassLoader getBeanClassLoader() {
+        return (this.beanClassLoader !=null?this.beanClassLoader: ClassUtils.getDefaultClassLoader());
+    }
+
+}
