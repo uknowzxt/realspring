@@ -13,6 +13,11 @@ public class ClassPathXmlApplicationContext extends AbstractApplicationContext {
         super(configFile);
     }
 
+    //Abstract那里加了双参的构造，这里也应该加上
+    public ClassPathXmlApplicationContext(String configFile,ClassLoader cl){
+        super(configFile,cl);
+    }
+
     @Override
     protected Resource getResourceByPath(String path) {
         return new ClassPathResource(path,this.getBeanClassLoader() );
