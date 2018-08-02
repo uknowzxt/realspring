@@ -1,14 +1,13 @@
 package com.uknowzxt.context.support;
 
-import com.uknowzxt.beans.factory.support.DefaulBeanFactory;
+import com.uknowzxt.beans.factory.support.DefaultBeanFactory;
 import com.uknowzxt.beans.factory.xml.XmlBeanDefinitionReader;
 import com.uknowzxt.context.ApplicationContext;
-import com.uknowzxt.core.io.ClassPathResource;
 import com.uknowzxt.core.io.Resource;
 import com.uknowzxt.util.ClassUtils;
 
 public abstract class AbstractApplicationContext  implements ApplicationContext{
-    private DefaulBeanFactory factory = null;
+    private DefaultBeanFactory factory = null;
     private ClassLoader beanClassLoader;
 
     public AbstractApplicationContext(String configFile) {
@@ -16,7 +15,7 @@ public abstract class AbstractApplicationContext  implements ApplicationContext{
     }
 
     public AbstractApplicationContext(String configFile,ClassLoader cl) {
-        factory = new DefaulBeanFactory();
+        factory = new DefaultBeanFactory();
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(factory);
         Resource resource =this.getResourceByPath(configFile);
         reader.loadBeanDefinitions(resource);

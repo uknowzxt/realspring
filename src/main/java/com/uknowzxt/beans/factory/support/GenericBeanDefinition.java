@@ -2,6 +2,10 @@ package com.uknowzxt.beans.factory.support;
 
 
 import com.uknowzxt.beans.BeanDefinition;
+import com.uknowzxt.beans.PropertyValue;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 对应配置文件的id和class 类定义的pojo类
@@ -12,6 +16,9 @@ public class  GenericBeanDefinition implements BeanDefinition {
     private boolean singleton = true;
     private boolean prototype = false;
     private String scope = SCOPE_DEFAULT;
+
+    List<PropertyValue> propertyValues = new ArrayList<PropertyValue>();
+
     public GenericBeanDefinition(String id, String beanClassName) {
 
         this.id = id;
@@ -23,6 +30,7 @@ public class  GenericBeanDefinition implements BeanDefinition {
 
         return this.beanClassName;
     }
+
 
     @Override
     public boolean isSingleton() {
@@ -44,4 +52,10 @@ public class  GenericBeanDefinition implements BeanDefinition {
         this.prototype = SCOPE_PROTOTYPE.equals(scope);
 
     }
+
+    @Override
+    public List<PropertyValue> getPropertyValues() {
+        return this.propertyValues;
+    }
+
 }

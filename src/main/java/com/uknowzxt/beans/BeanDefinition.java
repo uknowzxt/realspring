@@ -1,5 +1,7 @@
 package com.uknowzxt.beans;
 
+import java.util.List;
+
 public interface BeanDefinition {
 
      public static final String SCOPE_SINGLETON = "singleton";
@@ -17,4 +19,6 @@ public interface BeanDefinition {
 
 
      String getBeanClassName() ;
+
+     public List<PropertyValue> getPropertyValues();
 }
