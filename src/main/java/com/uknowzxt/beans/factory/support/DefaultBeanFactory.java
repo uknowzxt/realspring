@@ -8,6 +8,7 @@ import com.uknowzxt.beans.factory.BeanDefinitionStoreException;
 import com.uknowzxt.beans.factory.BeanFactory;
 import com.uknowzxt.beans.factory.config.ConfigurableBeanFactory;
 import com.uknowzxt.util.ClassUtils;
+import org.apache.commons.beanutils.BeanUtils;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -105,6 +106,9 @@ public class DefaultBeanFactory extends DefaultSingletonBeanRegistry implements 
                 Object resolvedValue = valueResolver.resolveValueIfNecessary(originalValue);//获取属性对象或者值
 
                 //对petStoreService的已经有的字段进行遍历
+                //下面for循环可以直接用BeanUtils工具类代替,无论类型如何，能转换就自动帮忙转换
+                //BeanUtils.setProperty(bean,propertyName,resolvedValue);
+
                 for (PropertyDescriptor pd : pds) {
                     if(pd.getName().equals(propertyName)){//如果字段名等于得到的属性名。设置属性
                         Object convertedValue = converter.convertIfNecessary(resolvedValue, pd.getPropertyType());//把值和需要的类型传递过去

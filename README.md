@@ -23,7 +23,7 @@
     答：spring对此进行了处理，如果spring在发现依赖会把依赖打印到控制台上面。
     
     3、set的反射为什么不是直接拼接方法反射待处理（有更简单的处理）　
-    答：主要是为了使用javaBean的特性。----commonBeansUtil
+    答：主要是为了使用javaBean的特性。----commons-BeansUtils
     
     
     
