@@ -1,8 +1,5 @@
 package com.uknowzxt.context.support;
 
-import com.uknowzxt.beans.factory.support.DefaulBeanFactory;
-import com.uknowzxt.beans.factory.xml.XmlBeanDefinitionReader;
-import com.uknowzxt.context.ApplicationContext;
 import com.uknowzxt.core.io.FileSystemResource;
 import com.uknowzxt.core.io.Resource;
 

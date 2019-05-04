@@ -17,12 +17,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class DefaulBeanFactory extends DefaultSingletonBeanRegistry implements BeanDefinitionRegistry ,ConfigurableBeanFactory  {
+public class DefaultBeanFactory extends DefaultSingletonBeanRegistry implements BeanDefinitionRegistry ,ConfigurableBeanFactory  {
 
     private final Map<String,BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<String, BeanDefinition>();
     private ClassLoader beanClassLoader;
 
-    public DefaulBeanFactory() {
+    public DefaultBeanFactory() {
     }
 
 
