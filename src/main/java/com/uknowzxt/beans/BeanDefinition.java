@@ -21,4 +21,9 @@ public interface BeanDefinition {
      String getBeanClassName() ;
 
      public List<PropertyValue> getPropertyValues();
+
+     ConstructorArgument getConstructorArgument();
+
+     public String getID();
+     public boolean hasConstructorArgumentValues();
 }

@@ -1,6 +1,7 @@
 package com.uknowzxt.beans.factory.xml;
 
 import com.uknowzxt.beans.BeanDefinition;
+import com.uknowzxt.beans.ConstructorArgument;
 import com.uknowzxt.beans.PropertyValue;
 import com.uknowzxt.beans.factory.BeanDefinitionStoreException;
 import com.uknowzxt.beans.factory.config.RuntimeBeanReference;
@@ -20,7 +21,6 @@ import java.io.InputStream;
 import java.util.Iterator;
 
 public class XmlBeanDefinitionReader {
-
     public static final String ID_ATTRIBUTE = "id";
 
     public static final String CLASS_ATTRIBUTE = "class";
@@ -34,6 +34,10 @@ public class XmlBeanDefinitionReader {
     public static final String VALUE_ATTRIBUTE = "value";
 
     public static final String NAME_ATTRIBUTE = "name";
+
+    public static final String CONSTRUCTOR_ARG_ELEMENT = "constructor-arg";
+
+    public static final String TYPE_ATTRIBUTE = "type";
 
     BeanDefinitionRegistry registry;
 
@@ -62,6 +66,7 @@ public class XmlBeanDefinitionReader {
                 if (ele.attribute(SCOPE_ATTRIBUTE)!=null) {//scope
                     bd.setScope(ele.attributeValue(SCOPE_ATTRIBUTE));
                 }
+                parseConstructorArgElements(ele,bd);//解析构造方法参数, 并把构造方法参数列表放入bd的constructorArgument的List<ValueHolder>中
                 parsePropertyElement(ele,bd);//解析属性,并把属性放入bd的list
                 this.registry.registerBeanDefinition(id, bd);//为factory的map设置bean定义
             }
@@ -78,7 +83,29 @@ public class XmlBeanDefinitionReader {
         }
 
     }
+    public void parseConstructorArgElements(Element beanEle, BeanDefinition bd) {
+        Iterator iter = beanEle.elementIterator(CONSTRUCTOR_ARG_ELEMENT);//<<constructor-arg>
+        while(iter.hasNext()){
+            Element ele = (Element)iter.next();
+            parseConstructorArgElement(ele, bd);
+        }
 
+    }
+    public void parseConstructorArgElement(Element ele, BeanDefinition bd) {
+
+        String typeAttr = ele.attributeValue(TYPE_ATTRIBUTE);
+        String nameAttr = ele.attributeValue(NAME_ATTRIBUTE);
+        Object value = parsePropertyValue(ele, bd, null);//value是RuntimeReference或者TypeStringValue
+        ConstructorArgument.ValueHolder valueHolder = new ConstructorArgument.ValueHolder(value);
+        if (StringUtils.hasLength(typeAttr)) {
+            valueHolder.setType(typeAttr);
+        }
+        if (StringUtils.hasLength(nameAttr)) {
+            valueHolder.setName(nameAttr);
+        }
+
+        bd.getConstructorArgument().addArgumentValue(valueHolder);
+    }
 
     public void parsePropertyElement(Element beanElem, BeanDefinition bd) {
         //对<bean>下面的标签进行遍历——<properties>

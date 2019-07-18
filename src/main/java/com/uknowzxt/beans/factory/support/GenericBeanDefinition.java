@@ -2,6 +2,7 @@ package com.uknowzxt.beans.factory.support;
 
 
 import com.uknowzxt.beans.BeanDefinition;
+import com.uknowzxt.beans.ConstructorArgument;
 import com.uknowzxt.beans.PropertyValue;
 
 import java.util.ArrayList;
@@ -10,7 +11,7 @@ import java.util.List;
 /**
  * 对应配置文件的id和class 类定义的pojo类
  */
-public class  GenericBeanDefinition implements BeanDefinition {
+public class GenericBeanDefinition implements BeanDefinition {
     private String id;
     private String beanClassName;
     private boolean singleton = true;
@@ -18,6 +19,7 @@ public class  GenericBeanDefinition implements BeanDefinition {
     private String scope = SCOPE_DEFAULT;
 
     List<PropertyValue> propertyValues = new ArrayList<PropertyValue>();
+    private ConstructorArgument constructorArgument = new ConstructorArgument();
 
     public GenericBeanDefinition(String id, String beanClassName) {
 
@@ -41,10 +43,12 @@ public class  GenericBeanDefinition implements BeanDefinition {
     public boolean isPrototype() {
         return this.prototype;
     }
+
     @Override
     public String getScope() {
         return this.scope;
     }
+
     @Override
     public void setScope(String scope) {
         this.scope = scope;
@@ -56,6 +60,19 @@ public class  GenericBeanDefinition implements BeanDefinition {
     @Override
     public List<PropertyValue> getPropertyValues() {
         return this.propertyValues;
+    }
+
+    @Override
+    public ConstructorArgument getConstructorArgument() {
+        return this.constructorArgument;
+    }
+    @Override
+    public String getID() {
+        return this.id;
+    }
+    @Override
+    public boolean hasConstructorArgumentValues() {
+        return !this.constructorArgument.isEmpty();
     }
 
 }

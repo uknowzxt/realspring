@@ -76,13 +76,18 @@ public class DefaultBeanFactory extends DefaultSingletonBeanRegistry implements 
 
     }
     private Object instantiateBean(BeanDefinition bd) {//通过bean的className，利用反射的方式，创建出bean的实例
-        ClassLoader cl = this.getBeanClassLoader();
-        String beanClassName = bd.getBeanClassName();
-        try {
-            Class<?> clz = cl.loadClass(beanClassName);
-            return clz.newInstance();
-        } catch (Exception e) {
-            throw new BeanCreationException("create bean for "+ beanClassName +" failed",e);
+        if(bd.hasConstructorArgumentValues()){//是否有构造参数
+            ConstructorResolver resolver = new ConstructorResolver(this);
+            return resolver.autowireConstructor(bd);
+        }else {
+            ClassLoader cl = this.getBeanClassLoader();
+            String beanClassName = bd.getBeanClassName();
+            try {
+                Class<?> clz = cl.loadClass(beanClassName);
+                return clz.newInstance();
+            } catch (Exception e) {
+                throw new BeanCreationException("create bean for " + beanClassName + " failed", e);
+            }
         }
     }
 
