@@ -10,6 +10,7 @@
 ##二、要点
 
 ###1.PackageResourceLoader  
+
     注释: 把包里面的所有类变成Resource类型  
     (1) 把传入的包名, "."全部变成"/";  
     (2) 利用classloader的getResource()方法,获取文件在磁盘中的真实路径, new File()获取到包名文件夹作为进行判断的根文件夹  
@@ -101,6 +102,7 @@
 因为类定义中要保有注解相关信息, 为了少耦合, 让新的类定义类扩展AnnotatedBeanDefinition接口.
 
 ###5.ClassPathBeanDefinitionScanner  
+
     注释: 把PackageResourceLoader(1)实现的内容和SimpleMetadataReader(3)实现的内容进行分装  
     (1)把拿到的包名们字符串通过","进行拆分  
     (2)遍历拿到的包名字符串  
@@ -114,6 +116,7 @@
     (4)把包名中得到的Set<BeanDefinition>进行遍历, 逐一注册进入DefaultBeanFactory的beanDefinitionMap( Map<String, BeanDefinition> )中      
 
 ###6.  XmlBeanDefinitionReader  
+
     注释: 本次改动主要目的在于, 从xml文件读取信息的时候, 区分< context:component-scan >标签, 并需要对包进行扫描, 注册该包名下的类. 
     (1)读取xml文件判断标签所属URI,如果是http://www.springframework.org/schema/context需要把解析出来的包名下的类进行扫描
     (2)调用ClassPathBeanDefinitionScanner(5)doScan()方法, 扫描包名中的所有类, 注册到factory中.
