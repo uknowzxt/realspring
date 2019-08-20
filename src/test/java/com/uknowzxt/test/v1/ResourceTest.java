@@ -5,7 +5,6 @@ import java.io.InputStream;
 import org.junit.Assert;
 import org.junit.Test;
 import com.uknowzxt.core.io.ClassPathResource;
-import com.uknowzxt.core.io.FileSystemResource;
 import com.uknowzxt.core.io.Resource;
 
 public class ResourceTest {

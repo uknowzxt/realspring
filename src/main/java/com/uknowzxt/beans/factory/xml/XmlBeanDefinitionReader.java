@@ -8,6 +8,7 @@ import com.uknowzxt.beans.factory.config.RuntimeBeanReference;
 import com.uknowzxt.beans.factory.config.TypedStringValue;
 import com.uknowzxt.beans.factory.support.BeanDefinitionRegistry;
 import com.uknowzxt.beans.factory.support.GenericBeanDefinition;
+import com.uknowzxt.context.annotation.ClassPathBeanDefinitionScanner;
 import com.uknowzxt.core.io.Resource;
 import com.uknowzxt.util.StringUtils;
 import org.apache.commons.logging.Log;
@@ -39,7 +40,14 @@ public class XmlBeanDefinitionReader {
 
     public static final String TYPE_ATTRIBUTE = "type";
 
+    public static final String BEANS_NAMESPACE_URI = "http://www.springframework.org/schema/beans";
+
+    public static final String CONTEXT_NAMESPACE_URI = "http://www.springframework.org/schema/context";
+
+    private static final String BASE_PACKAGE_ATTRIBUTE = "base-package";
+
     BeanDefinitionRegistry registry;
+
 
     protected final Log logger = LogFactory.getLog(getClass());
 
@@ -60,15 +68,12 @@ public class XmlBeanDefinitionReader {
             Iterator<Element> iter = root.elementIterator();
             while(iter.hasNext()){
                 Element ele = (Element)iter.next();
-                String id = ele.attributeValue(ID_ATTRIBUTE);//id
-                String beanClassName = ele.attributeValue(CLASS_ATTRIBUTE);//class
-                BeanDefinition bd = new GenericBeanDefinition(id,beanClassName);//bean定义
-                if (ele.attribute(SCOPE_ATTRIBUTE)!=null) {//scope
-                    bd.setScope(ele.attributeValue(SCOPE_ATTRIBUTE));
+                String namespaceUri = ele.getNamespaceURI();
+                if(this.isDefaultNamespace(namespaceUri)){//http://www.springframework.org/schema/beans
+                    parseDefaultElement(ele); //普通的bean
+                } else if(this.isContextNamespace(namespaceUri)){//http://www.springframework.org/schema/context
+                    parseComponentElement(ele); //例如<context:component-scan>
                 }
-                parseConstructorArgElements(ele,bd);//解析构造方法参数, 并把构造方法参数列表放入bd的constructorArgument的List<ValueHolder>中
-                parsePropertyElement(ele,bd);//解析属性,并把属性放入bd的list
-                this.registry.registerBeanDefinition(id, bd);//为factory的map设置bean定义
             }
         } catch (Exception e) {
             throw new BeanDefinitionStoreException("IOException parsing XML document from " + resource.getDescription(),e);
@@ -83,6 +88,32 @@ public class XmlBeanDefinitionReader {
         }
 
     }
+
+    private void parseComponentElement(Element ele) {
+        String basePackages = ele.attributeValue(BASE_PACKAGE_ATTRIBUTE);//获取base-package属性的值
+        ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(registry);
+        scanner.doScan(basePackages);//把类型传入, 对包名下的类进行扫描.
+
+    }
+    private void parseDefaultElement(Element ele) {
+        String id = ele.attributeValue(ID_ATTRIBUTE);//获取id属性的值
+        String beanClassName = ele.attributeValue(CLASS_ATTRIBUTE);//获取class属性的值
+        BeanDefinition bd = new GenericBeanDefinition(id,beanClassName);
+        if (ele.attribute(SCOPE_ATTRIBUTE)!=null) {
+            bd.setScope(ele.attributeValue(SCOPE_ATTRIBUTE));
+        }
+        parseConstructorArgElements(ele,bd);//解析构造方法参数, 并把构造方法参数列表放入bd的constructorArgument的List<ValueHolder>中
+        parsePropertyElement(ele,bd);//解析属性,并把属性放入bd的list
+        this.registry.registerBeanDefinition(id, bd);//为factory的map设置bean定义
+
+    }
+    public boolean isDefaultNamespace(String namespaceUri) {
+        return (!StringUtils.hasLength(namespaceUri) || BEANS_NAMESPACE_URI.equals(namespaceUri));
+    }
+    public boolean isContextNamespace(String namespaceUri){
+        return (!StringUtils.hasLength(namespaceUri) || CONTEXT_NAMESPACE_URI.equals(namespaceUri));
+    }
+
     public void parseConstructorArgElements(Element beanEle, BeanDefinition bd) {
         Iterator iter = beanEle.elementIterator(CONSTRUCTOR_ARG_ELEMENT);//<<constructor-arg>
         while(iter.hasNext()){
