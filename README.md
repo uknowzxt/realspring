@@ -19,7 +19,7 @@
     最终达到,把根目录下的所有文件都放入set<File>中的目的.  
     (4) 创建Resource[]数组, 大小和set<File>长度一致, 将set集合中的file文件全部转换成resource文件, 放入resource数组  
    
-###2.ASM部分
+###2.ASM部分(性能高于反射)
     类的元数据类: ClassMetaData类的信息元数据类 AnnotationMetadata类注解信息元数据类
     ASM运用类:
     (1)类的信息部分
