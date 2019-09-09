@@ -3,136 +3,145 @@
 @compenent注解自动注入
 
 ##一、目的：
+在getBean的过程中, 把bean中带@Autowired注解的字段同时初始化出来, 设置到字段中
 
-在配置文件中配置<context:component-scan base-package="com.uknowzxt.service.v4,com.uknowzxt.dao.v4"/>, 自动扫描配置的所有的包下面的所有类, 把带有@Compenent的注解的类, 生成beanDefinition, 放入BeanFactory. 
 *** 
 
 ##二、要点
 
-###1.PackageResourceLoader  
+###1.DependencyDescriptor  
 
-    注释: 把包里面的所有类变成Resource类型  
-    (1) 把传入的包名, "."全部变成"/";  
-    (2) 利用classloader的getResource()方法,获取文件在磁盘中的真实路径, new File()获取到包名文件夹作为进行判断的根文件夹  
-    (3) 获取该包名的代表的文件夹下面的所有文件, 遍历这些文件.   
-    如果文件不是一个文件夹的话, 把文件加入set<File>集合中.如果文件是一个文件夹的话, 递归调用本步骤,   
-    最终达到,把根目录下的所有文件都放入set<File>中的目的.  
-    (4) 创建Resource[]数组, 大小和set<File>长度一致, 将set集合中的file文件全部转换成resource文件, 放入resource数组  
+    目的: 抽象
+    因为@Autowired注解要使用的位置很对, 所以对需要转化的类型做一个抽象, 成员变量
+    private  Field field;
+    private boolean required;
    
-###2.ASM部分(性能高于反射)
-    类的元数据类: ClassMetaData类的信息元数据类 AnnotationMetadata类注解信息元数据类
-    ASM运用类:
-    (1)类的信息部分
-        
-              ClassVisitor(ASM抽象类)         
+###2.对BeanFactory体系进行扩展
+    目的: 通过字段得到实例
+    1.要根据DependencyDescriptor解析出实体类,会利用到BeanFactory的getBean()方法,那么要在factory中加入resolveDependency方法,所以对BeanFactory体系进行扩展
+    2.在之后进行populateBean的时候, 会对BeanPostProcessor进行遍历, 用到了addBeanPostProcessor(BeanPostProcessor postProcessor)方法和getBeanPostProcessors() 方法. 
+    
+    (1)更改继承体系
+    
+              BeanFactory[getBean]         
                 👆继承
-              ClassMetaDataReading
+              AutowireCapableBeanFactory[resolveDependency]
                 👆继承
-              AnnotationMetadataReadingVisitor  
-    (2)注解的信息部分
-   
-               AnnotationVisitor(ASM抽象类)
-                 👆继承
-               AnnotationAttributeReadingVisitor
+              ConfigurableBeanFactory[ 1.void setBeanClassLoader(ClassLoader beanClassLoader);
+                                       2. ClassLoader getBeanClassLoader();	
+                                       3. void addBeanPostProcessor(BeanPostProcessor postProcessor);
+                                       4. List<BeanPostProcessor> getBeanPostProcessors();] 
+                👆实现
+              DefaultBeanFactory[ 1. resolveDependency(DependencyDescriptor descriptor)
+                                  2. resolveBeanClass(BeanDefinition bd)] --- 暂时只涉及这个,BeanPostProcessor相关在之后处理
               
-    最终类图展示:
-
-              ClassVisitor         
-                👆继承
-              ClassMetaDataReading   👉实现:   ClassMetaData
-                👆继承
-              AnnotationMetadataReadingVisitor   👉实现:   ClassMetaData
-                👆被调用
-              AnnotationAttributeReadingVisitor   👉继承 :  AnnotationVisitor
-              
-       (1)ClassMetaDataReading因为继承了ClassVisitor类, 重写visit()方法, 在访问类的时候, 会去访问visit(), 可以获取类的信息.    
-       (2)AnnotationMetadataReadingVisitor因为继承了ClassMetaDataReading, 重写visitAnnotation()方法, 所以可以获取注解相关信息, 放入set集合中. 调用 new AnnotaionAttributeReadingVisitor().  
-       (3)AnnotationAttributeReadingVisitor因为继承了AnnotationVisitor, 重写了visit()和visitEnd()方法, 在visit()方法中获取注解相关的属性名和属性值. 放入 AnnotationAttributes( extends LinkedHashMap<属性名, 属性值>)中, 在visitEnd()方法中, 把注解类名,及Map<属性名,属性值>加入到一个map集合中.   
-       最终达到:通过一个InputStream流,获取到该流代表的类的信息, 注解信息. 
-        
-        ClassPathResource resource = new ClassPathResource("org/litespring/service/v4/PetStoreService.class");
-        ClassReader reader = new ClassReader(resource.getInputStream());
-        AnnotationMetadataReadingVisitor visitor = new AnnotationMetadataReadingVisitor();
-        reader.accept(visitor, ClassReader.SKIP_DEBUG);
+    (2)在DefaultBeanFactory增加resolveDependency方法
+              目的: 遍历beanDefinitionMap,直到找到一个与DependencyDescriptor中feild成员变量class类型相同的类定义,利用这个类定义的BeanId,创建一个实体类
+              [1]从传入的DependencyDescriptor获取字段的Class类型
+              [2]遍历beanDefinitionMap,拿到每一个BeanDefinition,先调用resolveBeanClass(bd)方法,确保这个类定义中有Class对象. 然后判断这个类定义的Class对象是不是与Feild字段的Class对象相同
+              [3]直到找到相同的, 利用factory的getBean方法, 获得一个实体类.
         
 
-###3.对ASM部分(2)进行封装
+###3.InjectionMetadata
 
-    MetadataReader
-        👆实现
-    SimpleMetadataReader
+    注释: InjectionMetadata调用InjectionElement
+    把成员变量List<InjectionElement>代表的每一个feild,利用DependencyDescriptor和factory的resolveDependency()方法解析出实体类, 并赋值给这个对象
+   
+   1.InjectionElement
     
-   对ASM进行封装, 根据Resource文件, 进行ASM, 对成员变量Resource/ClassMetadata/AnnotationMetadata 进行赋值
-   ```` java
-   	private final Resource resource;
+    (1)目的:调用2中内容,把得到的实例设置进入Feild字段中
+    
+    (2)继承体系:
+                    InjectionMetadata(抽象类)[protected Member member;
+                                              protected AutowireCapableBeanFactory factory; 
+                                              public abstract void inject(Object target)
+                                              ]
+                        👆继承
+                    AutowiredFieldElement
+    
+    (3)主要方法:inject(Object target)
+                    [1]利用其成员变量,Feild, 创建一个DependencyDescriptor对象.
+                    [2]调用factory的resolveDependency(desc)方法, 得到一个该Feild的实例对象.
+                    [3]如果实体类存在, 利用反射, 把得到的实例设置进入Feild中.
+    
+   2.InjectionMetadata
    
-   	private final ClassMetadata classMetadata;
+    (1)目的:为List<InjectionElement>代表的每一个feild字段赋值
+    
+    (2) 成员变量: 
+                    private final Class<?> targetClass;
+                    private List<InjectionElement> injectionElements;
+           	
+    (3)主要方法:inject(Object target)
+                    [1]遍历List<InjectionElement>.拿到每一个InjectionElement 
+                    [2]调用InjectionElement的inject方法, 为每一个InjectionElement代表的feid字段赋值. 
+           
    
-   	private final AnnotationMetadata annotationMetadata;
-   
-   
-   	public SimpleMetadataReader(Resource resource) throws IOException {
-   		InputStream is = new BufferedInputStream(resource.getInputStream());
-   		ClassReader classReader;
-   		
-   		try {
-   			classReader = new ClassReader(is);
-   		}
-   		finally {
-   			is.close();
-   		}
-   
-   		AnnotationMetadataReadingVisitor visitor = new AnnotationMetadataReadingVisitor();
-   		classReader.accept(visitor, ClassReader.SKIP_DEBUG);
-   
-   		this.annotationMetadata = visitor;
-   		this.classMetadata = visitor;
-   		this.resource = resource;
-   	}
-   ````
-   
-###4.对类定义实体类进行改造
+###4.AutowiredAnnotationProcessor
 
-    BeanDefinition
+    BeanPostProcessor[  Object beforeInitialization(Object bean, String beanName) throws BeansException;
+                      	Object afterInitialization(Object bean, String beanName) throws BeansException;]
         👆继承
-    GenericBeanDefinition
+    InstantiationAwareBeanPostProcessor[    Object beforeInstantiation(Class<?> beanClass, String beanName) throws BeansException;
+                                        	boolean afterInstantiation(Object bean, String beanName) throws BeansException;
+                                        	void postProcessPropertyValues(Object bean, String beanName) throws BeansException;]
         👆继承
-    ScannedGenericBeanDefinition  👉实现  AnnotatedBeanDefinition(扩展接口,有获取类的元数据[包括注解]的功能)
+    AutowiredAnnotationProcessor  [主要方法:
+                                       public void postProcessPropertyValues(Object bean, String beanName) throws BeansException
+                                       public InjectionMetadata buildAutowiringMetadata(Class<?> clazz)
+                                       private Annotation findAutowiredAnnotation(AccessibleObject ao) 
+                                   ]
     
-因为类定义中要保有注解相关信息, 为了少耦合, 让新的类定义类扩展AnnotatedBeanDefinition接口.
+     1.目的:拿到目标类的字段, 把其中带有注解的, 转化成AutowiredFieldElement对象集合, 进而转化成InjectionMetadata对象返回
+     2.主要方法:postProcessPropertyValues(Object bean, String beanName) 
+        (1)调用buildAutowiringMetadata(bean.getClass());创建一个InjectionMetadata
+            [1]根据目标类的class类, 获取到类中的所有字段, 遍历这些字段
+            [2]利用findAutowiredAnnotation(field)方法, 拿到字段上存在的规定注解
+            [3]如果注解存在,并且字段不是static的情况下, 利用feild,factory(成员变量),创建一个AutowiredFieldElement对象, 并把它加入LinkedList<InjectionElement> elements集合中
+            [4]利用目标类的class和遍历后得到的LinkedList<InjectionElement> elements, 创建一个InjectionMetadata并返回.
+        (2)调用InjectionMetadata的inject(bean)方法, 为bean的字段赋值. 
+        
 
-###5.ClassPathBeanDefinitionScanner  
+###5.调用时机
 
-    注释: 把PackageResourceLoader(1)实现的内容和SimpleMetadataReader(3)实现的内容进行分装  
-    (1)把拿到的包名们字符串通过","进行拆分  
-    (2)遍历拿到的包名字符串  
-    (3)遍历每一个包名,把包名下所有涉及到的类转化成BeanDefinition, 放入set集合返回  
-       [1]利用PackageResourceLoader类获得该包名下的所有的类的Resource[]数组  
-       [2]遍历Resource[]数组, 利用SimpleMetadataReader(3), 把Resource转换成类的元注解(AnnotationMetadata), 并放入利用SimpleMetadataReader成员变量中.   
-       [3]如果类上存在@Compenent注解, 创建ScannedGenericBeanDefinition, 传入AnnotationMetadata, 从传入AnnotationMetadata中得到className, 放入BeanDefinition的beanClassName字段中.  
-       [4]获取beanId, 找到注解的value属性, 如果存在属性值,即使用value的属性值作为beanId, 否则使用类名小写  
-       [5]为ScannedGenericBeanDefinition补全Id.
-       [6]把获取的完整ScannedGenericBeanDefinition放入set集合返回  
-    (4)把包名中得到的Set<BeanDefinition>进行遍历, 逐一注册进入DefaultBeanFactory的beanDefinitionMap( Map<String, BeanDefinition> )中      
+    1.目的: 给bean的属性赋值来处理@AutoWired注解再合适不过了. 
+    2.时机: 
+        (1)修改AbstractApplicationContext的构造方法,在最后调用registerBeanPostProcessors(factory)方法.
+                
+                public AbstractApplicationContext(String configFile,ClassLoader cl) {
+                        factory = new DefaultBeanFactory();
+                        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(factory);
+                        Resource resource =this.getResourceByPath(configFile);
+                        reader.loadBeanDefinitions(resource);
+                        //todo 这个getBeanClassloader是一个null 这里用了两个构造函数方式
+                        //factory.setBeanClassLoader(this.getBeanClassLoader());
+                        factory.setBeanClassLoader(cl);
+                        registerBeanPostProcessors(factory);
+                    }
+                    
+        (2)AbstractApplicationContext加入registerBeanPostProcessors(factory)方法, 方法中创建AutowiredAnnotationProcessor对象, 并在beanFactory的List<BeanPostProcessor> beanPostProcessors中加入这个AutowiredAnnotationProcessor 
+        
+                 protected void registerBeanPostProcessors(ConfigurableBeanFactory beanFactory) {
+                        AutowiredAnnotationProcessor postProcessor = new AutowiredAnnotationProcessor();
+                        postProcessor.setBeanFactory(beanFactory);
+                        beanFactory.addBeanPostProcessor(postProcessor);
+                    }
+                    
+        (3)修改populateBean(BeanDefinition bd, Object bean)方法, 在方法的开头, 遍历DefaultBeanFacotry的List<BeanPostProcessor> beanPostProcessors,   并调用每一个BeanPostProcessor的postProcessPropertyValues()方法.
+        
+                for(BeanPostProcessor processor : this.getBeanPostProcessors()){
+                            if(processor instanceof InstantiationAwareBeanPostProcessor){
+                                ((InstantiationAwareBeanPostProcessor)processor).postProcessPropertyValues(bean, bd.getID());
+                            }
+                }
 
-###6.  XmlBeanDefinitionReader  
-
-    注释: 本次改动主要目的在于, 从xml文件读取信息的时候, 区分< context:component-scan >标签, 并需要对包进行扫描, 注册该包名下的类. 
-    (1)读取xml文件判断标签所属URI,如果是http://www.springframework.org/schema/context需要把解析出来的包名下的类进行扫描
-    (2)调用ClassPathBeanDefinitionScanner(5)doScan()方法, 扫描包名中的所有类, 注册到factory中.
-    
    
                   
  
               
                    
             
-               
 
-
-*** 
-
-##三、答疑要点
 
     
     

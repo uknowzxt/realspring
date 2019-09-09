@@ -1,5 +1,7 @@
 package com.uknowzxt.context.support;
 
+import com.uknowzxt.beans.factory.annotation.AutowiredAnnotationProcessor;
+import com.uknowzxt.beans.factory.config.ConfigurableBeanFactory;
 import com.uknowzxt.beans.factory.support.DefaultBeanFactory;
 import com.uknowzxt.beans.factory.xml.XmlBeanDefinitionReader;
 import com.uknowzxt.context.ApplicationContext;
@@ -22,6 +24,7 @@ public abstract class AbstractApplicationContext  implements ApplicationContext{
         //todo 这个getBeanClassloader是一个null 这里用了两个构造函数方式
         //factory.setBeanClassLoader(this.getBeanClassLoader());
         factory.setBeanClassLoader(cl);
+        registerBeanPostProcessors(factory);
     }
 
 
@@ -34,14 +37,21 @@ public abstract class AbstractApplicationContext  implements ApplicationContext{
 
     protected abstract Resource getResourceByPath(String path);
 
-    @Override
+
     public void setBeanClassLoader(ClassLoader beanClassLoader) {
         this.beanClassLoader = beanClassLoader;
     }
 
-    @Override
+
     public ClassLoader getBeanClassLoader() {
         return (this.beanClassLoader !=null?this.beanClassLoader: ClassUtils.getDefaultClassLoader());
+    }
+    protected void registerBeanPostProcessors(ConfigurableBeanFactory beanFactory) {
+
+        AutowiredAnnotationProcessor postProcessor = new AutowiredAnnotationProcessor();
+        postProcessor.setBeanFactory(beanFactory);
+        beanFactory.addBeanPostProcessor(postProcessor);
+
     }
 
 }

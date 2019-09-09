@@ -1,8 +1,8 @@
 package com.uknowzxt.service.v4;
 
 import com.uknowzxt.beans.factory.annotation.Autowired;
-import com.uknowzxt.dao.v3.AccountDao;
-import com.uknowzxt.dao.v3.ItemDao;
+import com.uknowzxt.dao.v4.AccountDao;
+import com.uknowzxt.dao.v4.ItemDao;
 import com.uknowzxt.stereotype.Component;
 
 @Component(value="petStore")

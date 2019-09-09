@@ -6,7 +6,10 @@ import com.uknowzxt.beans.SimpleTypeConverter;
 import com.uknowzxt.beans.factory.BeanCreationException;
 import com.uknowzxt.beans.factory.BeanDefinitionStoreException;
 import com.uknowzxt.beans.factory.BeanFactory;
+import com.uknowzxt.beans.factory.config.BeanPostProcessor;
 import com.uknowzxt.beans.factory.config.ConfigurableBeanFactory;
+import com.uknowzxt.beans.factory.config.DependencyDescriptor;
+import com.uknowzxt.beans.factory.config.InstantiationAwareBeanPostProcessor;
 import com.uknowzxt.util.ClassUtils;
 import org.apache.commons.beanutils.BeanUtils;
 import org.dom4j.Document;
@@ -19,6 +22,7 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -28,10 +32,16 @@ public class DefaultBeanFactory extends DefaultSingletonBeanRegistry implements 
 
     private final Map<String,BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<String, BeanDefinition>();
     private ClassLoader beanClassLoader;
+    private List<BeanPostProcessor> beanPostProcessors = new ArrayList<BeanPostProcessor>();
 
     public DefaultBeanFactory() {
     }
-
+    public void addBeanPostProcessor(BeanPostProcessor postProcessor){
+        this.beanPostProcessors.add(postProcessor);
+    }
+    public List<BeanPostProcessor> getBeanPostProcessors() {
+        return this.beanPostProcessors;
+    }
 
     @Override
     public BeanDefinition getBeanDefinition(String beanID) {
@@ -92,6 +102,12 @@ public class DefaultBeanFactory extends DefaultSingletonBeanRegistry implements 
     }
 
     protected void populateBean(BeanDefinition bd, Object bean){
+        for(BeanPostProcessor processor : this.getBeanPostProcessors()){
+            if(processor instanceof InstantiationAwareBeanPostProcessor){
+                ((InstantiationAwareBeanPostProcessor)processor).postProcessPropertyValues(bean, bd.getID());
+            }
+        }
+
         List<PropertyValue> pvs = bd.getPropertyValues();//先把bean定义的属性列表拿出来
 
         if (pvs == null || pvs.isEmpty()) {
@@ -136,5 +152,31 @@ public class DefaultBeanFactory extends DefaultSingletonBeanRegistry implements 
     @Override
     public ClassLoader getBeanClassLoader() {
         return (this.beanClassLoader !=null?this.beanClassLoader:ClassUtils.getDefaultClassLoader());
+    }
+
+    @Override
+    public Object resolveDependency(DependencyDescriptor descriptor) {
+        Class<?> typeToMatch = descriptor.getDependencyType();//拿到字段对应的class类型
+        for(BeanDefinition bd: this.beanDefinitionMap.values()){
+            //确保BeanDefinition 有Class对象
+            resolveBeanClass(bd);
+            Class<?> beanClass = bd.getBeanClass();//拿到该类定义的class类型
+            if(typeToMatch.isAssignableFrom(beanClass)){//判断字段类型与class类型是否相符
+                return this.getBean(bd.getID());//如果相符,调用factory的getBean方法,获取到实体类
+            }
+        }
+        return null;
+    }
+
+    public void resolveBeanClass(BeanDefinition bd) {
+        if(bd.hasBeanClass()){
+            return;
+        } else{
+            try {
+                bd.resolveBeanClass(this.getBeanClassLoader());
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException("can't load class:"+bd.getBeanClassName());
+            }
+        }
     }
 }
