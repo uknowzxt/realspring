@@ -1,157 +1,67 @@
 # realspring
 
-@compenent注解自动注入
+@aop(一) 找出切面(要被增强的方法)和通知(增强的部分)
 
 ##一、目的：
-在getBean的过程中, 把bean中带@Autowired注解的字段同时初始化出来, 设置到字段中
+(1)根据expression字符串,判断当前执行的方法是不是符合条件的
+(2)找出增强时, 调用的方法.
 
 *** 
 
 ##二、要点
 
-###1.DependencyDescriptor  
+###1.AspectJExpressionPointcut 找出pointCut  
 
-    目的: 抽象
-    因为@Autowired注解要使用的位置很对, 所以对需要转化的类型做一个抽象, 成员变量
-    private  Field field;
-    private boolean required;
+    目的: 从<aop:pointcut>的expression中解析出AspectJ包下的PointcutExpression, 利用这个类来判断传入的方法是否符合规则
+   1.继承体系:
    
-###2.对BeanFactory体系进行扩展
-    目的: 通过字段得到实例
-    1.要根据DependencyDescriptor解析出实体类,会利用到BeanFactory的getBean()方法,那么要在factory中加入resolveDependency方法,所以对BeanFactory体系进行扩展
-    2.在之后进行populateBean的时候, 会对BeanPostProcessor进行遍历, 用到了addBeanPostProcessor(BeanPostProcessor postProcessor)方法和getBeanPostProcessors() 方法. 
+            Pointcut[MethodMatcher getMethodMatcher();       MethodMatcher[boolean matches(Method method/*, Class<?> targetClass*/);]
+                     String getExpression();]   
+                            👆实现                                                       👆实现
+                                    AspectJExpressionPointcut[private String expression;
+                                                              private  PointcutExpression pointcutExpression;
+                                                              private ClassLoader pointcutClassLoader;]
+                                                              
+   2.主要方法:matches(Method method/*, Class<?> targetClass*/) 
+   
+        (1)调用checkReadyToMatch();方法, 确保expression存在, 并且把expression字符串转化成PointcutExpression类
+            [1]调用getExpression查看expression是不是空, 是空的话抛出异常
+            [2]查看成员变量pointcutExpression是否已经被赋值,没有的话调用buildPointcutExpression(ClassLoader classLoader)把expression字符串转化成PointcutExpression
+        (2)调用getShadowMatch(method)方法, 获得ShadowMatch.
+        (3)利用ShadowMatch来判断是不是符合.
+        
+        '''java
+        checkReadyToMatch();//保证expression存在并且把expression转成PointcutExpression类
+        		
+        		ShadowMatch shadowMatch = getShadowMatch(method);//查看方法是否符合expression的要求
+        		
+        		if (shadowMatch.alwaysMatches()) {
+        			return true;
+        		}
+        		
+        		return false;
+        '''java
+          
+             
+             
+   
+###2.MethodLocatingFactory 定位增强时调用的方法
+    目的: 找到通知. 通过类和方法名, 找到增强时要执行的方法. 
     
-    (1)更改继承体系
+   1 抽象通知-MethodLocatingFactory
     
-              BeanFactory[getBean]         
-                👆继承
-              AutowireCapableBeanFactory[resolveDependency]
-                👆继承
-              ConfigurableBeanFactory[ 1.void setBeanClassLoader(ClassLoader beanClassLoader);
-                                       2. ClassLoader getBeanClassLoader();	
-                                       3. void addBeanPostProcessor(BeanPostProcessor postProcessor);
-                                       4. List<BeanPostProcessor> getBeanPostProcessors();] 
-                👆实现
-              DefaultBeanFactory[ 1. resolveDependency(DependencyDescriptor descriptor)
-                                  2. resolveBeanClass(BeanDefinition bd)] --- 暂时只涉及这个,BeanPostProcessor相关在之后处理
+       private String targetBeanName;
+       private String methodName;
+       private Method method;
               
-    (2)在DefaultBeanFactory增加resolveDependency方法
-              目的: 遍历beanDefinitionMap,直到找到一个与DependencyDescriptor中feild成员变量class类型相同的类定义,利用这个类定义的BeanId,创建一个实体类
-              [1]从传入的DependencyDescriptor获取字段的Class类型
-              [2]遍历beanDefinitionMap,拿到每一个BeanDefinition,先调用resolveBeanClass(bd)方法,确保这个类定义中有Class对象. 然后判断这个类定义的Class对象是不是与Feild字段的Class对象相同
-              [3]直到找到相同的, 利用factory的getBean方法, 获得一个实体类.
+  2 关键方法-setBeanFactory(BeanFactory beanFactory)
         
+        (1)判断targetBeanName有没有值, 没有的话抛出错误
+        (2)判断methodName有没有值, 没有的话抛出错误
+        (3)调用beanFactory的getType(this.targetBeanName)方法, 获得bean的Class类
+                [1]BeanFacotry接口中加入新的方法, getType(this.targetBeanName).
+                [2]getType方法首先通过BeanName获取BeanDefinition.
+                [3]调用resolveBeanClass(bd)来确保bd中存在这个bean的class对象
+                [4]调用BeanDefinition.getBeanClass()得到Class类并返回
+        (4)调用BeanUtils.resolveSignature(this.methodName, beanClass). 来得到这份方法, 并给成员变量Method method赋值
 
-###3.InjectionMetadata
-
-    注释: InjectionMetadata调用InjectionElement
-    把成员变量List<InjectionElement>代表的每一个feild,利用DependencyDescriptor和factory的resolveDependency()方法解析出实体类, 并赋值给这个对象
-   
-   1.InjectionElement
-    
-    (1)目的:调用2中内容,把得到的实例设置进入Feild字段中
-    
-    (2)继承体系:
-                    InjectionMetadata(抽象类)[protected Member member;
-                                              protected AutowireCapableBeanFactory factory; 
-                                              public abstract void inject(Object target)
-                                              ]
-                        👆继承
-                    AutowiredFieldElement
-    
-    (3)主要方法:inject(Object target)
-                    [1]利用其成员变量,Feild, 创建一个DependencyDescriptor对象.
-                    [2]调用factory的resolveDependency(desc)方法, 得到一个该Feild的实例对象.
-                    [3]如果实体类存在, 利用反射, 把得到的实例设置进入Feild中.
-    
-   2.InjectionMetadata
-   
-    (1)目的:为List<InjectionElement>代表的每一个feild字段赋值
-    
-    (2) 成员变量: 
-                    private final Class<?> targetClass;
-                    private List<InjectionElement> injectionElements;
-           	
-    (3)主要方法:inject(Object target)
-                    [1]遍历List<InjectionElement>.拿到每一个InjectionElement 
-                    [2]调用InjectionElement的inject方法, 为每一个InjectionElement代表的feid字段赋值. 
-           
-   
-###4.AutowiredAnnotationProcessor
-
-    BeanPostProcessor[  Object beforeInitialization(Object bean, String beanName) throws BeansException;
-                      	Object afterInitialization(Object bean, String beanName) throws BeansException;]
-        👆继承
-    InstantiationAwareBeanPostProcessor[    Object beforeInstantiation(Class<?> beanClass, String beanName) throws BeansException;
-                                        	boolean afterInstantiation(Object bean, String beanName) throws BeansException;
-                                        	void postProcessPropertyValues(Object bean, String beanName) throws BeansException;]
-        👆继承
-    AutowiredAnnotationProcessor  [主要方法:
-                                       public void postProcessPropertyValues(Object bean, String beanName) throws BeansException
-                                       public InjectionMetadata buildAutowiringMetadata(Class<?> clazz)
-                                       private Annotation findAutowiredAnnotation(AccessibleObject ao) 
-                                   ]
-    
-     1.目的:拿到目标类的字段, 把其中带有注解的, 转化成AutowiredFieldElement对象集合, 进而转化成InjectionMetadata对象返回
-     2.主要方法:postProcessPropertyValues(Object bean, String beanName) 
-        (1)调用buildAutowiringMetadata(bean.getClass());创建一个InjectionMetadata
-            [1]根据目标类的class类, 获取到类中的所有字段, 遍历这些字段
-            [2]利用findAutowiredAnnotation(field)方法, 拿到字段上存在的规定注解
-            [3]如果注解存在,并且字段不是static的情况下, 利用feild,factory(成员变量),创建一个AutowiredFieldElement对象, 并把它加入LinkedList<InjectionElement> elements集合中
-            [4]利用目标类的class和遍历后得到的LinkedList<InjectionElement> elements, 创建一个InjectionMetadata并返回.
-        (2)调用InjectionMetadata的inject(bean)方法, 为bean的字段赋值. 
-        
-
-###5.调用时机
-
-    1.目的: 给bean的属性赋值来处理@AutoWired注解再合适不过了. 
-    2.时机: 
-        (1)修改AbstractApplicationContext的构造方法,在最后调用registerBeanPostProcessors(factory)方法.
-                
-                public AbstractApplicationContext(String configFile,ClassLoader cl) {
-                        factory = new DefaultBeanFactory();
-                        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(factory);
-                        Resource resource =this.getResourceByPath(configFile);
-                        reader.loadBeanDefinitions(resource);
-                        //todo 这个getBeanClassloader是一个null 这里用了两个构造函数方式
-                        //factory.setBeanClassLoader(this.getBeanClassLoader());
-                        factory.setBeanClassLoader(cl);
-                        registerBeanPostProcessors(factory);
-                    }
-                    
-        (2)AbstractApplicationContext加入registerBeanPostProcessors(factory)方法, 方法中创建AutowiredAnnotationProcessor对象, 并在beanFactory的List<BeanPostProcessor> beanPostProcessors中加入这个AutowiredAnnotationProcessor 
-        
-                 protected void registerBeanPostProcessors(ConfigurableBeanFactory beanFactory) {
-                        AutowiredAnnotationProcessor postProcessor = new AutowiredAnnotationProcessor();
-                        postProcessor.setBeanFactory(beanFactory);
-                        beanFactory.addBeanPostProcessor(postProcessor);
-                    }
-                    
-        (3)修改populateBean(BeanDefinition bd, Object bean)方法, 在方法的开头, 遍历DefaultBeanFacotry的List<BeanPostProcessor> beanPostProcessors,   并调用每一个BeanPostProcessor的postProcessPropertyValues()方法.
-        
-                for(BeanPostProcessor processor : this.getBeanPostProcessors()){
-                            if(processor instanceof InstantiationAwareBeanPostProcessor){
-                                ((InstantiationAwareBeanPostProcessor)processor).postProcessPropertyValues(bean, bd.getID());
-                            }
-                }
-
-   
-                  
- 
-              
-                   
-            
-
-
-    
-    
-    
-        
-    
-      
-        
-                      
-       
-        
-    
-    

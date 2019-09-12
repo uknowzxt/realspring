@@ -6,6 +6,7 @@ import com.uknowzxt.beans.SimpleTypeConverter;
 import com.uknowzxt.beans.factory.BeanCreationException;
 import com.uknowzxt.beans.factory.BeanDefinitionStoreException;
 import com.uknowzxt.beans.factory.BeanFactory;
+import com.uknowzxt.beans.factory.NoSuchBeanDefinitionException;
 import com.uknowzxt.beans.factory.config.BeanPostProcessor;
 import com.uknowzxt.beans.factory.config.ConfigurableBeanFactory;
 import com.uknowzxt.beans.factory.config.DependencyDescriptor;
@@ -75,6 +76,7 @@ public class DefaultBeanFactory extends DefaultSingletonBeanRegistry implements 
         }
         return createBean(bd);
     }
+
 
     private Object createBean(BeanDefinition bd) {
         //创建实例
@@ -178,5 +180,15 @@ public class DefaultBeanFactory extends DefaultSingletonBeanRegistry implements 
                 throw new RuntimeException("can't load class:"+bd.getBeanClassName());
             }
         }
+    }
+
+    @Override
+    public Class<?> getType(String name) throws NoSuchBeanDefinitionException {
+        BeanDefinition bd = this.getBeanDefinition(name);
+        if(bd == null){
+            throw new NoSuchBeanDefinitionException(name);
+        }
+        resolveBeanClass(bd);
+        return bd.getBeanClass();
     }
 }
