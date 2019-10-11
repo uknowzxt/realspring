@@ -113,8 +113,8 @@ public class CglibProxyFactory implements AopProxyFactory {
 			enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE); //"BySpringCGLIB"
 			enhancer.setInterceptDuringConstruction(false);
 
-			Callback[] callbacks = getCallbacks(rootClass);
-			Class<?>[] types = new Class<?>[callbacks.length];
+			Callback[] callbacks = getCallbacks(rootClass);//获得拦截器回调数组
+			Class<?>[] types = new Class<?>[callbacks.length];//拦截器类型的数组
 			for (int x = 0; x < types.length; x++) {
 				types[x] = callbacks[x].getClass();
 			}
@@ -267,7 +267,7 @@ public class CglibProxyFactory implements AopProxyFactory {
 		}
 
 		
-		public int accept(Method method) {
+		public int accept(Method method) {//可以根据方法名称配置不同的拦截器
 			// 注意，这里做了简化
 			return AOP_PROXY;
 			
