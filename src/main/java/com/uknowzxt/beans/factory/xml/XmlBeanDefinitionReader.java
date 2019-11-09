@@ -1,5 +1,6 @@
 package com.uknowzxt.beans.factory.xml;
 
+import com.uknowzxt.aop.config.ConfigBeanDefinitionParser;
 import com.uknowzxt.beans.BeanDefinition;
 import com.uknowzxt.beans.ConstructorArgument;
 import com.uknowzxt.beans.PropertyValue;
@@ -44,6 +45,9 @@ public class XmlBeanDefinitionReader {
 
     public static final String CONTEXT_NAMESPACE_URI = "http://www.springframework.org/schema/context";
 
+    public static final String AOP_NAMESPACE_URI = "http://www.springframework.org/schema/aop";
+
+
     private static final String BASE_PACKAGE_ATTRIBUTE = "base-package";
 
     BeanDefinitionRegistry registry;
@@ -73,6 +77,8 @@ public class XmlBeanDefinitionReader {
                     parseDefaultElement(ele); //普通的bean
                 } else if(this.isContextNamespace(namespaceUri)){//http://www.springframework.org/schema/context
                     parseComponentElement(ele); //例如<context:component-scan>
+                }  else if(this.isAOPNamespace(namespaceUri)){
+                    parseAOPElement(ele);  //例如 <aop:config>
                 }
             }
         } catch (Exception e) {
@@ -95,6 +101,12 @@ public class XmlBeanDefinitionReader {
         scanner.doScan(basePackages);//把类型传入, 对包名下的类进行扫描.
 
     }
+
+    private void parseAOPElement(Element ele){//解析aop config
+        ConfigBeanDefinitionParser parser = new ConfigBeanDefinitionParser();
+        parser.parse(ele, this.registry);
+    }
+
     private void parseDefaultElement(Element ele) {
         String id = ele.attributeValue(ID_ATTRIBUTE);//获取id属性的值
         String beanClassName = ele.attributeValue(CLASS_ATTRIBUTE);//获取class属性的值
@@ -113,7 +125,9 @@ public class XmlBeanDefinitionReader {
     public boolean isContextNamespace(String namespaceUri){
         return (!StringUtils.hasLength(namespaceUri) || CONTEXT_NAMESPACE_URI.equals(namespaceUri));
     }
-
+    public boolean isAOPNamespace(String namespaceUri){
+        return (!StringUtils.hasLength(namespaceUri) || AOP_NAMESPACE_URI.equals(namespaceUri));
+    }
     public void parseConstructorArgElements(Element beanEle, BeanDefinition bd) {
         Iterator iter = beanEle.elementIterator(CONSTRUCTOR_ARG_ELEMENT);//<<constructor-arg>
         while(iter.hasNext()){

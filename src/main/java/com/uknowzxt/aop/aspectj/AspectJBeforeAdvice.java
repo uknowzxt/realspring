@@ -1,5 +1,6 @@
 package com.uknowzxt.aop.aspectj;
 
+import com.uknowzxt.aop.config.AspectInstanceFactory;
 import org.aopalliance.intercept.MethodInvocation;
 
 import java.lang.reflect.Method;
@@ -7,8 +8,8 @@ import java.lang.reflect.Method;
 
 public class AspectJBeforeAdvice extends AbstractAspectJAdvice {
 	
-	public AspectJBeforeAdvice(Method adviceMethod,AspectJExpressionPointcut pointcut,Object adviceObject){
-		super(adviceMethod,pointcut,adviceObject);
+	public AspectJBeforeAdvice(Method adviceMethod, AspectJExpressionPointcut pointcut, AspectInstanceFactory adviceObjectFactory){
+		super(adviceMethod,pointcut,adviceObjectFactory);
 	}
 	
 	public Object invoke(MethodInvocation mi) throws Throwable {//mi里面存在一个拦截器链
@@ -17,6 +18,4 @@ public class AspectJBeforeAdvice extends AbstractAspectJAdvice {
 		Object o = mi.proceed();
 		return o;
 	}
-
-	
 }

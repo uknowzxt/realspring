@@ -1,5 +1,6 @@
 package com.uknowzxt.beans.factory.support;
 
+import com.uknowzxt.beans.factory.AbstractBeanFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.uknowzxt.beans.BeanDefinition;
@@ -17,11 +18,11 @@ public class ConstructorResolver {
 	protected final Log logger = LogFactory.getLog(getClass());
 	
 	
-	private final ConfigurableBeanFactory beanFactory;
+	private final AbstractBeanFactory beanFactory;
 
 
 	
-	public ConstructorResolver(ConfigurableBeanFactory beanFactory) {
+	public ConstructorResolver(AbstractBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 	}
 
@@ -63,11 +64,11 @@ public class ConstructorResolver {
 			argsToUse = new Object[parameterTypes.length];
 
 			//存在beandefinition中的构造参数列表的每个参数是否与当前构造方法的参数一一对应
-			boolean result = this.valuesMatchTypes(parameterTypes, 
-					cargs.getArgumentValues(), 
-					argsToUse, 
-					valueResolver, 
-					typeConverter);
+			boolean result = this.valuesMatchTypes(parameterTypes, //真正的构造参数类型
+					cargs.getArgumentValues(), 						//配置的构造参数
+					argsToUse, 										//当前使用的构造参数
+					valueResolver, 									//转换构造参数的resolver
+					typeConverter);									//类型转换的converter
 
 			//对应的话取出当前构造方法备用
 			if(result){

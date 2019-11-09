@@ -30,4 +30,6 @@ public interface BeanDefinition {
     Class<?> getBeanClass() throws IllegalStateException;
      boolean hasBeanClass();
      Class<?> resolveBeanClass(ClassLoader beanClassLoader) throws ClassNotFoundException;
+
+    public boolean isSynthetic();
 }

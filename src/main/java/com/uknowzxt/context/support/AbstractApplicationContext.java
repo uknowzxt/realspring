@@ -1,5 +1,6 @@
 package com.uknowzxt.context.support;
 
+import com.uknowzxt.aop.aspectj.AspectJAutoProxyCreator;
 import com.uknowzxt.beans.factory.NoSuchBeanDefinitionException;
 import com.uknowzxt.beans.factory.annotation.AutowiredAnnotationProcessor;
 import com.uknowzxt.beans.factory.config.ConfigurableBeanFactory;
@@ -8,6 +9,8 @@ import com.uknowzxt.beans.factory.xml.XmlBeanDefinitionReader;
 import com.uknowzxt.context.ApplicationContext;
 import com.uknowzxt.core.io.Resource;
 import com.uknowzxt.util.ClassUtils;
+
+import java.util.List;
 
 public abstract class AbstractApplicationContext  implements ApplicationContext{
     private DefaultBeanFactory factory = null;
@@ -49,14 +52,24 @@ public abstract class AbstractApplicationContext  implements ApplicationContext{
     }
     protected void registerBeanPostProcessors(ConfigurableBeanFactory beanFactory) {
 
-        AutowiredAnnotationProcessor postProcessor = new AutowiredAnnotationProcessor();
-        postProcessor.setBeanFactory(beanFactory);
-        beanFactory.addBeanPostProcessor(postProcessor);
+        {
+            AutowiredAnnotationProcessor postProcessor = new AutowiredAnnotationProcessor();
+            postProcessor.setBeanFactory(beanFactory);
+            beanFactory.addBeanPostProcessor(postProcessor);
+        }
+        {
+            AspectJAutoProxyCreator postProcessor = new AspectJAutoProxyCreator();
+            postProcessor.setBeanFactory(beanFactory);
+            beanFactory.addBeanPostProcessor(postProcessor);
+        }
 
     }
 
     public Class<?> getType(String name) throws NoSuchBeanDefinitionException {
         return this.factory.getType(name);
+    }
+    public List<Object> getBeansByType(Class<?> type){
+        return this.factory.getBeansByType(type);
     }
 
 }

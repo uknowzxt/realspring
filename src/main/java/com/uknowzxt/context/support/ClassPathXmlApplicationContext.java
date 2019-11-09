@@ -3,6 +3,8 @@ package com.uknowzxt.context.support;
 import com.uknowzxt.core.io.ClassPathResource;
 import com.uknowzxt.core.io.Resource;
 
+import java.util.List;
+
 public class ClassPathXmlApplicationContext extends AbstractApplicationContext {
 
     public ClassPathXmlApplicationContext(String configFile){

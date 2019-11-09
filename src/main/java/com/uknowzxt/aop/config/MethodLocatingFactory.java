@@ -2,6 +2,8 @@ package com.uknowzxt.aop.config;
 
 import com.uknowzxt.beans.BeanUtils;
 import com.uknowzxt.beans.factory.BeanFactory;
+import com.uknowzxt.beans.factory.BeanFactoryAware;
+import com.uknowzxt.beans.factory.FactoryBean;
 import com.uknowzxt.util.StringUtils;
 
 import java.lang.reflect.Method;
@@ -9,7 +11,7 @@ import java.lang.reflect.Method;
 /**
  * 对advice的抽象
  */
-public class MethodLocatingFactory {
+public class MethodLocatingFactory implements FactoryBean<Method>, BeanFactoryAware {
 	
 	private String targetBeanName;
 
@@ -51,6 +53,11 @@ public class MethodLocatingFactory {
 
 	public Method getObject() throws Exception {
 		return this.method;
+	}
+
+	@Override
+	public Class<?> getObjectType() {
+		return Method.class;
 	}
 
 }
