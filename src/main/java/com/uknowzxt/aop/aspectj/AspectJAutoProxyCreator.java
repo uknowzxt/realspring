@@ -6,6 +6,7 @@ import com.uknowzxt.aop.Pointcut;
 import com.uknowzxt.aop.framework.AopConfigSupport;
 import com.uknowzxt.aop.framework.AopProxyFactory;
 import com.uknowzxt.aop.framework.CglibProxyFactory;
+import com.uknowzxt.aop.framework.JdkAopProxyFactory;
 import com.uknowzxt.beans.BeansException;
 import com.uknowzxt.beans.factory.config.BeanPostProcessor;
 import com.uknowzxt.beans.factory.config.ConfigurableBeanFactory;
@@ -71,7 +72,7 @@ public class AspectJAutoProxyCreator implements BeanPostProcessor {
 			proxyFactory =  new CglibProxyFactory(config);
 		} else{
 			//TODO 需要实现JDK 代理
-			//proxyFactory = new JdkAopProxyFactory(config);
+			proxyFactory = new JdkAopProxyFactory(config);
 		}	
 
 		return proxyFactory.getProxy();
