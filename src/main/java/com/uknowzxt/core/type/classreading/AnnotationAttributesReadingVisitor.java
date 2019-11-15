@@ -29,7 +29,7 @@ final class AnnotationAttributesReadingVisitor extends AnnotationVisitor {
 		
 	}
 	@Override
-	public final void visitEnd(){//访问结束的时候, 把注解属性的map, 放入attributesMap..(<注解类名,<属性名,属性值>>)
+	public final void visitEnd(){//访问结束的时候, 把注解属性的map, 放入attributesMap..(<注解类名,map<属性名,属性值// >>)
 		this.attributesMap.put(this.annotationType, this.attributes);
 	}
 	
